@@ -1,0 +1,26 @@
+﻿Income (Median household income) for Connecticut by County
+"All Races (includes Hispanic/Latino), Both Sexes, All Ages, 2019-2023"
+Sorted by Value
+
+County,FIPS,Value (Dollars),Rank within US (of 3141 counties)
+"United States",00000,"78,538","N/A"
+"Connecticut",09000,"93,760","9 of 52"
+"Windham County",09015,"77,748","586"
+"New Haven County",09009,"83,971","383"
+"New London County",09011,"89,428","261"
+"Hartford County",09003,"89,982","253"
+"Litchfield County",09005,"95,323","191"
+"Middlesex County",09007,"97,859","166"
+"Tolland County",09013,"103,443","118"
+"Fairfield County",09001,"114,462","59"
+
+Suggested Citation:
+HDPulse: An Ecosystem of Minority Health and Health Disparities Resources. National Institute on Minority Health and Health Disparities. Created 11/28/2025. Available from https://hdpulse.nimhd.nih.gov
+
+Notes:
+"NA: Data not available [http://hdpulse.nimhd.nih.gov/data/datanotavailable.html] for this combination of geography, cancer site, age, and race/ethnicity."
+Source: Demographic data provided by the Census Bureau (http://www.census.gov/) & the American Community Survey (http://www.census.gov/acs/www/).
+"For more information about Income (Median household income), see the dictionary at http://hdpulse.nimhd.nih.gov/dictionary.php#income."
+"Median Incomes over 250,000 have been coded to 250,001 by the Census Bureau. [ http://www2.census.gov/acs2012_5yr/summaryfile/ACS_2008-2012_SF_Tech_Doc.pdf ]"
+
+"Note: This website still uses Connecticut counties instead of planning regions for consistency of geographies across data topics. If/when all data sources have new planning regions, then this website will switch to using them. For median income variables, block group data is weighted and summarized to the counties."
