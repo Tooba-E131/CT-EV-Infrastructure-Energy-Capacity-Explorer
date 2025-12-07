@@ -4,10 +4,9 @@ import pandas as pd
 import streamlit as st
 import altair as alt
 import pydeck as pdk
-import re
 
 # ---------------------------------------------------------------
-# Base directory: where app.py and all CSVs live (OIM7502_F25)
+# Base directory: where app.py and all CSVs live
 # ---------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -16,9 +15,107 @@ EV_REG_PATH = BASE_DIR / "Electric_Vehicle_Registration_Data.csv"
 CHARGE_PATH = BASE_DIR / "Electric_Vehicle_Charging_Stations.csv"
 POP_PATH = BASE_DIR / "city_county_2016_energy_profiles.csv"
 
+# ---------------------------------------------------------------
+# City → county mapping for Connecticut
+# ---------------------------------------------------------------
+CT_CITY_TO_COUNTY = {
+    # Fairfield
+    "BETHEL": "Fairfield",
+    "BRIDGEPORT": "Fairfield",
+    "BROOKFIELD": "Fairfield",
+    "DANBURY": "Fairfield",
+    "DARIEN": "Fairfield",
+    "EASTON": "Fairfield",
+    "FAIRFIELD": "Fairfield",
+    "GREENWICH": "Fairfield",
+    "MONROE": "Fairfield",
+    "NEW CANAAN": "Fairfield",
+    "NEW FAIRFIELD": "Fairfield",
+    "NEWTOWN": "Fairfield",
+    "NORWALK": "Fairfield",
+    "REDDING": "Fairfield",
+    "RIDGEFIELD": "Fairfield",
+    "SHELTON": "Fairfield",
+    "SHERMAN": "Fairfield",
+    "STAMFORD": "Fairfield",
+    "STRATFORD": "Fairfield",
+    "TRUMBULL": "Fairfield",
+    "WESTON": "Fairfield",
+    "WESTPORT": "Fairfield",
+    "WILTON": "Fairfield",
+
+    # Hartford (examples)
+    "AVON": "Hartford",
+    "BERLIN": "Hartford",
+    "BLOOMFIELD": "Hartford",
+    "BRISTOL": "Hartford",
+    "BURLINGTON": "Hartford",
+    "CANTON": "Hartford",
+    "EAST GRANBY": "Hartford",
+    "EAST HARTFORD": "Hartford",
+    "EAST WINDSOR": "Hartford",
+    "ENFIELD": "Hartford",
+    "FARMINGTON": "Hartford",
+    "GLASTONBURY": "Hartford",
+    "GRANBY": "Hartford",
+    "HARTFORD": "Hartford",
+    "MANCHESTER": "Hartford",
+    "MARLBOROUGH": "Hartford",
+    "NEW BRITAIN": "Hartford",
+    "NEWINGTON": "Hartford",
+    "PLAINVILLE": "Hartford",
+    "ROCKY HILL": "Hartford",
+    "SIMSBURY": "Hartford",
+    "SOUTH WINDSOR": "Hartford",
+    "SOUTHINGTON": "Hartford",
+    "SUFFIELD": "Hartford",
+    "WEST HARTFORD": "Hartford",
+    "WETHERSFIELD": "Hartford",
+    "WINDSOR": "Hartford",
+    "WINDSOR LOCKS": "Hartford",
+
+    # New Haven (examples)
+    "ANSONIA": "New Haven",
+    "BEACON FALLS": "New Haven",
+    "BETHANY": "New Haven",
+    "BRANFORD": "New Haven",
+    "CHESHIRE": "New Haven",
+    "DERBY": "New Haven",
+    "EAST HAVEN": "New Haven",
+    "HAMDEN": "New Haven",
+    "MERIDEN": "New Haven",
+    "MIDDLEBURY": "New Haven",
+    "MILFORD": "New Haven",
+    "NAUGATUCK": "New Haven",
+    "NEW HAVEN": "New Haven",
+    "NORTH BRANFORD": "New Haven",
+    "NORTH HAVEN": "New Haven",
+    "ORANGE": "New Haven",
+    "OXFORD": "New Haven",
+    "PROSPECT": "New Haven",
+    "SEYMOUR": "New Haven",
+    "SHELTON": "New Haven",
+    "WALLINGFORD": "New Haven",
+    "WATERBURY": "New Haven",
+    "WEST HAVEN": "New Haven",
+    "WOLCOTT": "New Haven",
+
+    # New London (examples)
+    "COLCHESTER": "New London",
+    "EAST LYME": "New London",
+    "GROTON": "New London",
+    "LEDYARD": "New London",
+    "MONTVILLE": "New London",
+    "NEW LONDON": "New London",
+    "NORWICH": "New London",
+    "OLD LYME": "New London",
+    "OLD SAYBROOK": "Middlesex",
+    "STONINGTON": "New London",
+    "WATERFORD": "New London",
+}
 
 # ---------------------------------------------------------------
-# Data loading & cleaning helpers
+# Data loading & cleaning
 # ---------------------------------------------------------------
 @st.cache_data(show_spinner=True)
 def load_and_clean_data():
@@ -37,26 +134,19 @@ def load_and_clean_data():
             "Rank within US (of 3141 counties)": "us_rank",
         }
     )
-
-    # Clean county names
     health["county"] = (
         health["county"]
         .astype(str)
         .str.replace(" County", "", regex=False)
         .str.strip()
     )
-    health["median_income"] = pd.to_numeric(
-        health["median_income"], errors="coerce"
-    )
+    health["median_income"] = pd.to_numeric(health["median_income"], errors="coerce")
     health["us_rank"] = pd.to_numeric(health["us_rank"], errors="coerce")
 
-    # Keep CT counties only if state info is present (if applicable)
+    # If state column exists, keep CT only
     if "State Abbreviation" in health_raw.columns:
         health["state"] = health_raw["State Abbreviation"].str.strip()
         health = health[health["state"] == "CT"]
-    else:
-        # If no state column, we assume the file is already filtered to CT
-        pass
 
     # ----- EV registration data -----
     ev_raw = pd.read_csv(EV_REG_PATH)
@@ -68,32 +158,29 @@ def load_and_clean_data():
         .str.replace(r"[^a-z0-9_]", "", regex=True)
     )
 
-    # Keep CT vehicles only
+    # CT only if state column exists
     if "state" in ev.columns:
         ev = ev[ev["state"].astype(str).str.upper() == "CT"]
 
-    # Clean key columns
+    # Clean text columns when present
     if "primary_customer_city" in ev.columns:
         ev["primary_customer_city"] = (
             ev["primary_customer_city"].astype(str).str.title().str.strip()
         )
-
     if "vehicle_make" in ev.columns:
         ev["vehicle_make"] = ev["vehicle_make"].astype(str).str.title().str.strip()
-
     if "vehicle_model" in ev.columns:
-        ev["vehicle_model"] = (
-            ev["vehicle_model"].astype(str).str.replace("_", " ").str.title().str.strip()
-        )
+        ev["vehicle_model"] = ev["vehicle_model"].astype(str).str.title().str.strip()
 
-    # Parse model year
+    # Vehicle year
     if "model_year" in ev.columns:
         ev["vehicle_year"] = pd.to_numeric(ev["model_year"], errors="coerce")
     elif "vehicle_year" in ev.columns:
         ev["vehicle_year"] = pd.to_numeric(ev["vehicle_year"], errors="coerce")
 
-    # Drop clear duplicates if there's a unique ID
     ev_clean = ev.copy()
+
+    # Drop duplicates if a unique key exists
     if "vin" in ev_clean.columns:
         ev_clean = ev_clean.drop_duplicates(subset=["vin"])
     elif "id" in ev_clean.columns:
@@ -111,7 +198,6 @@ def load_and_clean_data():
 
     # ----- Charging station data -----
     ch_raw = pd.read_csv(CHARGE_PATH)
-
     ch = ch_raw.copy()
     ch.columns = (
         ch.columns.str.lower()
@@ -120,7 +206,7 @@ def load_and_clean_data():
     )
 
     if "city" in ch.columns:
-        ch["city"] = ch["city"].astype(str).str.strip().str.title()
+        ch["city"] = ch["city"].astype(str).str.title().str.strip()
 
     # Charger counts
     for col in ["ev_level1_evse_num", "ev_level2_evse_num", "ev_dc_fast_count"]:
@@ -136,115 +222,30 @@ def load_and_clean_data():
     )
     ch["has_dc_fast"] = (ch.get("ev_dc_fast_count", 0) > 0).astype(int)
     ch["has_level2"] = (ch.get("ev_level2_evse_num", 0) > 0).astype(int)
-    ch["has_level1"] = (ch.get("ev_level1_evse_num", 0) > 0).astype(
-        int
-    )
+    ch["has_level1"] = (ch.get("ev_level1_evse_num", 0) > 0).astype(int)
 
-    # Clean station name, county/city
-    if "station_name" in ch.columns:
-        ch["station_name"] = ch["station_name"].astype(str).str.strip()
+    # Location columns (rename if necessary)
+    if {"longitude", "latitude"}.issubset(ch.columns):
+        ch["lon"] = ch["longitude"]
+        ch["lat"] = ch["latitude"]
+    elif {"lng", "lat"}.issubset(ch.columns):
+        # already fine
+        pass
 
-    # ----- City → county mapping for CT -----
-    ct_city_to_county = {
-        # Fairfield County
-        "BRIDGEPORT": "Fairfield",
-        "BROOKFIELD": "Fairfield",
-        "DANBURY": "Fairfield",
-        "DARIEN": "Fairfield",
-        "EASTON": "Fairfield",
-        "FAIRFIELD": "Fairfield",
-        "GREENWICH": "Fairfield",
-        "MONROE": "Fairfield",
-        "NEW CANAAN": "Fairfield",
-        "NEW FAIRFIELD": "Fairfield",
-        "NORWALK": "Fairfield",
-        "RIDGEFIELD": "Fairfield",
-        "RIVERSIDE": "Fairfield",
-        "SHELTON": "Fairfield",
-        "STAMFORD": "Fairfield",
-        "STRATFORD": "Fairfield",
-        "TRUMBULL": "Fairfield",
-        "WESTON": "Fairfield",
-        "WESTPORT": "Fairfield",
-        "WILTON": "Fairfield",
+    # ----- Map city → county (FIXED ev_reg block) -----
+    ev_reg = ev_clean.copy()
 
-        # Hartford County (examples)
-        "AVON": "Hartford",
-        "BERLIN": "Hartford",
-        "BLOOMFIELD": "Hartford",
-        "BRISTOL": "Hartford",
-        "BURLINGTON": "Hartford",
-        "CANTON": "Hartford",
-        "EAST GRANBY": "Hartford",
-        "EAST HARTFORD": "Hartford",
-        "EAST WINDSOR": "Hartford",
-        "ENFIELD": "Hartford",
-        "FARMINGTON": "Hartford",
-        "GLASTONBURY": "Hartford",
-        "GRANBY": "Hartford",
-        "HARTFORD": "Hartford",
-        "MANCHESTER": "Hartford",
-        "MARLBOROUGH": "Hartford",
-        "NEW BRITAIN": "Hartford",
-        "NEWINGTON": "Hartford",
-        "PLAINVILLE": "Hartford",
-        "ROCKY HILL": "Hartford",
-        "SIMSBURY": "Hartford",
-        "SOUTH WINDSOR": "Hartford",
-        "SOUTHINGTON": "Hartford",
-        "SUFFIELD": "Hartford",
-        "WEST HARTFORD": "Hartford",
-        "WETHERSFIELD": "Hartford",
-        "WINDSOR": "Hartford",
-        "WINDSOR LOCKS": "Hartford",
-
-        # New Haven County (examples)
-        "ANSONIA": "New Haven",
-        "BEACON FALLS": "New Haven",
-        "BETHANY": "New Haven",
-        "BRANFORD": "New Haven",
-        "CHESHIRE": "New Haven",
-        "DERBY": "New Haven",
-        "EAST HAVEN": "New Haven",
-        "HAMDEN": "New Haven",
-        "MERIDEN": "New Haven",
-        "MIDDLEBURY": "New Haven",
-        "MILFORD": "New Haven",
-        "NAUGATUCK": "New Haven",
-        "NEW HAVEN": "New Haven",
-        "NORTH BRANFORD": "New Haven",
-        "NORTH HAVEN": "New Haven",
-        "ORANGE": "New Haven",
-        "OXFORD": "New Haven",
-        "PROSPECT": "New Haven",
-        "SEYMOUR": "New Haven",
-        "SHELTON": "New Haven",
-        "SOUTHINGTON": "New Haven",
-        "WALLINGFORD": "New Haven",
-        "WATERBURY": "New Haven",
-        "WEST HAVEN": "New Haven",
-        "WOLCOTT": "New Haven",
-    }
-
-    # Add city_clean for mapping
     if "primary_customer_city" in ev_reg.columns:
-        ev_reg = ev_clean.copy()
-        ev_reg["Primary Customer City"] = ev_reg["primary_customer_city"]
-    else:
-        ev_reg = ev_clean.copy()
-        ev_reg["Primary Customer City"] = ""
-
-    if "Primary Customer City" in ev_reg.columns:
         ev_reg["city_clean"] = (
-            ev_reg["Primary Customer City"].astype(str).str.upper().str.strip()
+            ev_reg["primary_customer_city"].astype(str).str.upper().str.strip()
         )
     else:
         ev_reg["city_clean"] = ""
 
     ch["city_clean"] = ch.get("city", "").astype(str).str.upper().str.strip()
 
-    ev_reg["county"] = ev_reg["city_clean"].map(ct_city_to_county)
-    ch["county"] = ch["city_clean"].map(ct_city_to_county)
+    ev_reg["county"] = ev_reg["city_clean"].map(CT_CITY_TO_COUNTY)
+    ch["county"] = ch["city_clean"].map(CT_CITY_TO_COUNTY)
 
     # ----- County EV & charging summaries -----
     ev_count_by_county = (
@@ -257,7 +258,7 @@ def load_and_clean_data():
     ch_summary_by_county = (
         ch.groupby("county")
         .agg(
-            total_stations=("station_name", "count"),
+            total_stations=("station_name", "count") if "station_name" in ch.columns else ("city", "count"),
             total_chargers=("total_chargers", "sum"),
             fast_chargers=("has_dc_fast", "sum"),
             level2_chargers=("has_level2", "sum"),
@@ -315,18 +316,16 @@ def load_and_clean_data():
         / (county_full["population_2016"] / 1000.0)
     )
 
-    return ev_clean, ch, health, county_full
+    return ev_clean, ch, health, county_full, ev_reg
 
 
 # ---------------------------------------------------------------
-# Load data (with friendly spinner)
+# Load data
 # ---------------------------------------------------------------
-with st.spinner("Loading and cleaning datasets..."):
-    ev_clean, ch, health, county_full = load_and_clean_data()
-
+ev_clean, ch, health, county_full, ev_reg = load_and_clean_data()
 
 # ---------------------------------------------------------------
-# Streamlit page config & intro
+# Streamlit page config
 # ---------------------------------------------------------------
 st.set_page_config(
     page_title="CT EV Infrastructure & Energy Capacity Explorer",
@@ -336,7 +335,7 @@ st.set_page_config(
 
 alt.data_transformers.disable_max_rows()
 
-st.title("CT EV Infrastructure & Energy Capacity Explorer")
+st.title("🚗⚡ CT EV Infrastructure & Energy Capacity Explorer")
 
 st.markdown(
     """
@@ -349,7 +348,6 @@ Use the sidebar filters to focus on **specific counties**, **EV types**, and **v
 The KPIs and visuals will update to reflect your current view.
 """
 )
-
 
 # ---------------------------------------------------------------
 # Sidebar filters
@@ -389,7 +387,9 @@ st.sidebar.markdown(
     "- Use *Maps & gaps* to discuss geography\n"
 )
 
+# ---------------------------------------------------------------
 # Apply filters for EV and charging data
+# ---------------------------------------------------------------
 ev_filtered = ev_clean.copy()
 if selected_ev_cat != "All EV types":
     ev_filtered = ev_filtered[ev_filtered["ev_category"] == selected_ev_cat]
@@ -401,13 +401,13 @@ if "vehicle_year" in ev_filtered.columns:
     ]
 
 if selected_county != "All CT":
-    ev_filtered["city_clean"] = (
-        ev_filtered["primary_customer_city"].astype(str).str.upper().str.strip()
-    )
-    ev_filtered["county"] = ev_filtered["city_clean"].map(
-        {k: v for k, v in county_full.set_index("county").to_dict().items()}
-    )
-    ev_filtered = ev_filtered[ev_filtered["county"] == selected_county]
+    if "primary_customer_city" in ev_filtered.columns:
+        ev_filtered["city_clean"] = (
+            ev_filtered["primary_customer_city"].astype(str).str.upper().str.strip()
+        )
+        ev_filtered["county"] = ev_filtered["city_clean"].map(CT_CITY_TO_COUNTY)
+        ev_filtered = ev_filtered[ev_filtered["county"] == selected_county]
+
     ch_filtered = ch[ch["county"] == selected_county]
     county_filtered = county_full[county_full["county"] == selected_county]
 else:
@@ -427,7 +427,7 @@ tab_overview, tab_docs, tab_county, tab_maps = st.tabs(
 with tab_overview:
     st.subheader("Big picture")
 
-    # High-level KPIs based on current filters
+    # KPIs based on filtered data (prof feedback)
     total_ev_records = len(ev_filtered)
     total_charging_stations = len(ch_filtered)
     counties_in_view = county_filtered["county"].nunique()
@@ -436,7 +436,6 @@ with tab_overview:
     if "total_chargers" in ch_filtered.columns:
         total_public_chargers = int(ch_filtered["total_chargers"].sum())
 
-    # EV-to-charger gap (simple indicator)
     evs_per_charger = None
     if total_public_chargers and total_public_chargers > 0:
         evs_per_charger = total_ev_records / total_public_chargers
@@ -445,13 +444,11 @@ with tab_overview:
     c1.metric("EV records (filtered)", f"{total_ev_records:,}")
     c2.metric("Charging stations (filtered)", f"{total_charging_stations:,}")
     c3.metric("Counties in view", int(counties_in_view))
-
     if total_public_chargers is not None:
         c4.metric("Total public chargers", f"{total_public_chargers:,}")
     else:
         c4.metric("Total public chargers", "N/A")
 
-    # Additional insight metrics
     c5, c6 = st.columns(2)
     if evs_per_charger is not None:
         c5.metric("EVs per public charger", f"{evs_per_charger:,.1f}")
@@ -487,13 +484,13 @@ with tab_docs:
     with st.expander("EV registrations (Electric_Vehicle_Registration_Data.csv)", True):
         st.markdown(
             """
-- Standardized column names and parsed date fields.  
+- Standardized column names and parsed year fields.  
 - Restricted to **CT registrations only** and removed duplicate IDs.  
 - Cleaned city names, vehicle make, and model text.  
 - Created:
     - `ev_category` from `fuel_code` (BEV / PHEV / Other)  
-    - `ev_count = 1` to make aggregation easier  
-- Parsed `vehicle_year` from the model year column.
+    - `ev_count = 1` so each row counts as one vehicle.  
+- Parsed `vehicle_year` from model year.
 """
         )
         st.dataframe(ev_clean.head(25), use_container_width=True)
@@ -501,18 +498,34 @@ with tab_docs:
     with st.expander("Charging stations (Electric_Vehicle_Charging_Stations.csv)", True):
         st.markdown(
             """
-- Standardized column names.  
-- Cleaned city names and basic station text fields.  
-- Built **charger counts** per station:
-    - `ev_level1_evse_num`  
-    - `ev_level2_evse_num`  
-    - `ev_dc_fast_count`  
-    - `total_chargers` (sum of the above)  
-- Flags:
-    - `has_dc_fast`, `has_level2`, `has_level1`
+- Standardized column names and cleaned city names.  
+- Converted Level 1, Level 2, and DC fast columns to integers.  
+- Created:
+    - `total_chargers`
+    - Boolean flags `has_dc_fast`, `has_level2`, `has_level1`  
+- Added latitude/longitude for mapping.
 """
         )
-        st.dataframe(ch.head(25), use_container_width=True)
+        st.dataframe(
+            ch.head(25)[
+                [
+                    col
+                    for col in [
+                        "station_name",
+                        "city",
+                        "county",
+                        "total_chargers",
+                        "ev_dc_fast_count",
+                        "ev_level2_evse_num",
+                        "ev_level1_evse_num",
+                        "lat",
+                        "lon",
+                    ]
+                    if col in ch.columns
+                ]
+            ],
+            use_container_width=True,
+        )
 
     with st.expander("County summary (joined table)", True):
         st.markdown(
@@ -650,40 +663,53 @@ Each point is a station; bubble size reflects **total chargers**, and color refl
     if ch_filtered.empty:
         st.info("No charging stations in the current filter selection.")
     else:
-        # Pydeck scatterplot
-        layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=ch_filtered,
-            get_position=["longitude", "latitude"]
-            if {"longitude", "latitude"}.issubset(ch_filtered.columns)
-            else ["lng", "lat"],
-            get_radius="total_chargers * 300",
-            get_fill_color=[
-                "has_dc_fast * 255",
-                "has_level2 * 180",
-                "has_level1 * 120",
-            ],
-            pickable=True,
-        )
+        # Choose appropriate position columns
+        if {"lon", "lat"}.issubset(ch_filtered.columns):
+            pos_cols = ["lon", "lat"]
+        elif {"longitude", "latitude"}.issubset(ch_filtered.columns):
+            pos_cols = ["longitude", "latitude"]
+        elif {"lng", "lat"}.issubset(ch_filtered.columns):
+            pos_cols = ["lng", "lat"]
+        else:
+            st.warning("No latitude/longitude columns found for mapping.")
+            pos_cols = None
 
-        avg_lat = ch_filtered["latitude"].mean() if "latitude" in ch_filtered.columns else 41.6
-        avg_lon = ch_filtered["longitude"].mean() if "longitude" in ch_filtered.columns else -72.7
+        if pos_cols is not None:
+            layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=ch_filtered,
+                get_position=pos_cols,
+                get_radius="total_chargers * 300",
+                get_fill_color=[
+                    "has_dc_fast * 255",
+                    "has_level2 * 180",
+                    "has_level1 * 120",
+                ],
+                pickable=True,
+            )
 
-        view_state = pdk.ViewState(
-            longitude=avg_lon,
-            latitude=avg_lat,
-            zoom=7,
-            pitch=35,
-        )
+            # Fallback center
+            if pos_cols[1] in ch_filtered.columns and pos_cols[0] in ch_filtered.columns:
+                avg_lat = ch_filtered[pos_cols[1]].mean()
+                avg_lon = ch_filtered[pos_cols[0]].mean()
+            else:
+                avg_lat, avg_lon = 41.6, -72.7
 
-        deck = pdk.Deck(
-            layers=[layer],
-            initial_view_state=view_state,
-            tooltip={
-                "text": "{station_name}\n{city}, {county}\n"
-                        "Total chargers: {total_chargers}\n"
-                        "DC fast: {ev_dc_fast_count}"
-            },
-        )
+            view_state = pdk.ViewState(
+                longitude=avg_lon,
+                latitude=avg_lat,
+                zoom=7,
+                pitch=35,
+            )
 
-        st.pydeck_chart(deck)
+            deck = pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip={
+                    "text": "{station_name}\n{city}, {county}\n"
+                            "Total chargers: {total_chargers}\n"
+                            "DC fast: {ev_dc_fast_count}"
+                },
+            )
+
+            st.pydeck_chart(deck)
