@@ -335,7 +335,7 @@ st.set_page_config(
 
 alt.data_transformers.disable_max_rows()
 
-st.title("🚗⚡ CT EV Infrastructure & Energy Capacity Explorer")
+st.title("CT EV Infrastructure & Energy Capacity Explorer")
 
 st.markdown(
     """
@@ -583,47 +583,44 @@ Use these charts when writing about **which counties are better served vs unders
     st.altair_chart(ch_bar, use_container_width=True)
 
     # Scatter: EVs vs chargers
-    st.markdown("##### EV registrations vs total public chargers")
-    scatter = (
-        alt.Chart(county_full.dropna(subset=["ev_registrations", "total_chargers"]))
-        .mark_circle(size=150)
-        .encode(
-            x=alt.X("ev_registrations:Q", title="EV registrations"),
-            y=alt.Y("total_chargers:Q", title="Total public chargers"),
-            color=alt.Color("median_income:Q", title="Median income (HDPulse)"),
-            tooltip=[
-                "county:N",
-                "ev_registrations:Q",
-                "total_chargers:Q",
-                "median_income:Q",
-            ],
-        )
-        .interactive()
-    )
-    st.altair_chart(scatter, use_container_width=True)
+st.markdown("##### EV registrations vs total public chargers")
 
-    # Scatter: per-capita EVs vs chargers
-    st.markdown("##### EVs and chargers per 1,000 people")
-    df2 = county_full.dropna(subset=["evs_per_1k_people", "chargers_per_1k_people"])
-    scatter2 = (
-        alt.Chart(df2)
-        .mark_circle(size=150)
-        .encode(
-            x=alt.X("evs_per_1k_people:Q", title="EVs per 1,000 people"),
-            y=alt.Y("chargers_per_1k_people:Q", title="Chargers per 1,000 people"),
-            color=alt.Color("county:N", legend=None),
-            tooltip=[
-                "county:N",
-                "evs_per_1k_people:Q",
-                "chargers_per_1k_people:Q",
-                "ev_registrations:Q",
-                "total_chargers:Q",
-                "population_2016:Q",
-            ],
-        )
-        .interactive()
+# Check whether we actually have any median_income data
+has_income = county_full["median_income"].notna().any()
+
+if has_income:
+    scatter_data = county_full.dropna(
+        subset=["ev_registrations", "total_chargers", "median_income"]
     )
-    st.altair_chart(scatter2, use_container_width=True)
+    color_enc = alt.Color(
+        "median_income:Q",
+        title="Median income (HDPulse)",
+    )
+else:
+    # No income data → still show the relationship, just color by county
+    scatter_data = county_full.dropna(
+        subset=["ev_registrations", "total_chargers"]
+    )
+    color_enc = alt.Color("county:N", legend=None)
+
+scatter = (
+    alt.Chart(scatter_data)
+    .mark_circle(size=150)
+    .encode(
+        x=alt.X("ev_registrations:Q", title="EV registrations"),
+        y=alt.Y("total_chargers:Q", title="Total public chargers"),
+        color=color_enc,
+        tooltip=[
+            "county:N",
+            "ev_registrations:Q",
+            "total_chargers:Q",
+            "median_income:Q",
+        ],
+    )
+    .interactive()
+)
+
+st.altair_chart(scatter, use_container_width=True)
 
     st.markdown("##### EVs per charger by county (gap view)")
 
