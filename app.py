@@ -660,56 +660,80 @@ Each point is a station; bubble size reflects **total chargers**, and color refl
 """
     )
 
-    if ch_filtered.empty:
-        st.info("No charging stations in the current filter selection.")
+    # slider to hide very small sites
+    min_chargers = st.slider(
+        "Minimum total chargers per station to display", 1, 20, value=1
+    )
+
+    # Work on a copy of the filtered charging data
+    ch_map = ch_filtered.copy()
+
+    # Ensure we have lat/lon columns
+    if "lat" not in ch_map.columns or "lon" not in ch_map.columns:
+        # Try to infer from other columns
+        if "latitude" in ch_map.columns and "longitude" in ch_map.columns:
+            ch_map["lat"] = pd.to_numeric(ch_map["latitude"], errors="coerce")
+            ch_map["lon"] = pd.to_numeric(ch_map["longitude"], errors="coerce")
+        elif "new_georeferenced_column" in ch_map.columns:
+            # Example of parsing a WKT-like POINT column if present
+            coords = ch_map["new_georeferenced_column"].astype(str).str.extract(
+                r"POINT\s*\(([-\d\.]+)\s+([-\d\.]+)\)"
+            )
+            ch_map["lon"] = pd.to_numeric(coords[0], errors="coerce")
+            ch_map["lat"] = pd.to_numeric(coords[1], errors="coerce")
+
+    # Keep only rows with valid coordinates and above the charger threshold
+    ch_map = ch_map.dropna(subset=["lat", "lon"]).copy()
+    ch_map = ch_map[ch_map["total_chargers"] >= min_chargers]
+
+    if ch_map.empty:
+        st.warning("No stations meet the filter criteria or have valid coordinates.")
     else:
-        # Choose appropriate position columns
-        if {"lon", "lat"}.issubset(ch_filtered.columns):
-            pos_cols = ["lon", "lat"]
-        elif {"longitude", "latitude"}.issubset(ch_filtered.columns):
-            pos_cols = ["longitude", "latitude"]
-        elif {"lng", "lat"}.issubset(ch_filtered.columns):
-            pos_cols = ["lng", "lat"]
-        else:
-            st.warning("No latitude/longitude columns found for mapping.")
-            pos_cols = None
+        avg_lat = ch_map["lat"].mean()
+        avg_lon = ch_map["lon"].mean()
 
-        if pos_cols is not None:
-            layer = pdk.Layer(
-                "ScatterplotLayer",
-                data=ch_filtered,
-                get_position=pos_cols,
-                get_radius="total_chargers * 300",
-                get_fill_color=[
-                    "has_dc_fast * 255",
-                    "has_level2 * 180",
-                    "has_level1 * 120",
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=ch_map,
+            get_position="[lon, lat]",  # same pattern you used before
+            get_radius="total_chargers * 400",
+            get_fill_color="[has_dc_fast * 255, has_level2 * 180, 120, 180]",
+            pickable=True,
+        )
+
+        view_state = pdk.ViewState(
+            longitude=avg_lon,
+            latitude=avg_lat,
+            zoom=7,
+            pitch=35,
+        )
+
+        deck = pdk.Deck(
+            layers=[layer],
+            initial_view_state=view_state,
+            tooltip={
+                "text": "{station_name}\n{city}, {county}\n"
+                        "Total chargers: {total_chargers}\n"
+                        "DC fast: {ev_dc_fast_count}"
+            },
+        )
+
+        st.pydeck_chart(deck)
+
+        with st.expander("Stations shown on the map"):
+            st.dataframe(
+                ch_map[
+                    [
+                        "station_name",
+                        "city",
+                        "county",
+                        "total_chargers",
+                        "ev_dc_fast_count",
+                        "ev_level2_evse_num",
+                        "ev_level1_evse_num",
+                        "lat",
+                        "lon",
+                    ]
                 ],
-                pickable=True,
+                use_container_width=True,
             )
-
-            # Fallback center
-            if pos_cols[1] in ch_filtered.columns and pos_cols[0] in ch_filtered.columns:
-                avg_lat = ch_filtered[pos_cols[1]].mean()
-                avg_lon = ch_filtered[pos_cols[0]].mean()
-            else:
-                avg_lat, avg_lon = 41.6, -72.7
-
-            view_state = pdk.ViewState(
-                longitude=avg_lon,
-                latitude=avg_lat,
-                zoom=7,
-                pitch=35,
-            )
-
-            deck = pdk.Deck(
-                layers=[layer],
-                initial_view_state=view_state,
-                tooltip={
-                    "text": "{station_name}\n{city}, {county}\n"
-                            "Total chargers: {total_chargers}\n"
-                            "DC fast: {ev_dc_fast_count}"
-                },
-            )
-
-            st.pydeck_chart(deck)
