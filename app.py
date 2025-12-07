@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent
 HEALTH_PATH = BASE_DIR / "HDPulse_data_export.csv"
 EV_REG_PATH = BASE_DIR / "Electric_Vehicle_Registration_Data.csv"
 CHARGE_PATH = BASE_DIR / "Electric_Vehicle_Charging_Stations.csv"
-POP_PATH = BASE_DIR / "city_county_2016_energy_profiles.csv"
+POP_PATH = BASE_DIR / "2016cityandcountyenergyprofiles.csv"
 
 # ---------------------------------------------------------------
 # City → county mapping for Connecticut
