@@ -39,7 +39,8 @@ The app includes:
 ## 📁 Repository Contents
 
 ```text
-app.py                                      # Streamlit application
+app.py                                     # Streamlit application
+CT EV Infra analysis.ipynb                 # In-depth analysis of CT EV infrastructure
 Data cleaning + Analysis (1).ipynb         # Full data cleaning & analysis workflow
 Electric_Vehicle_Registration_Data.csv     # EV adoption dataset
 Electric_Vehicle_Charging_Stations.csv     # Public charging station dataset
