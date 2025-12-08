@@ -534,9 +534,8 @@ This table is built by:
 
 1. Aggregating EV registrations by county → `ev_registrations`  
 2. Aggregating charging infrastructure by county → `total_stations`, `total_chargers`, etc.  
-3. Joining with county-level `median_income` from HDPulse.  
-4. Joining with `population_2016` from the DOE city & county energy profiles.  
-5. Computing:
+3. Joining with `population_2016` from the DOE city & county energy profiles.  
+4. Computing:
     - `evs_per_charger`  
     - `evs_per_1k_people`  
     - `chargers_per_1k_people`
