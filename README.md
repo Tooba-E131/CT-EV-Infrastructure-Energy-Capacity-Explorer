@@ -4,7 +4,7 @@ A data-driven analysis examining whether Connecticut’s rapid electric vehicle 
 
 ---
 
-## 📌 Project Overview
+## Project Overview
 
 This project investigates the relationship between:
 
@@ -22,7 +22,7 @@ Using Connecticut’s clean municipal datasets, we developed a unified analytica
 
 ---
 
-## 🚀 Live Streamlit App
+## Live Streamlit App
 
 🔗 **https://ct-ev-infrastructure-energy-capacity-explorer.streamlit.app**
 
@@ -37,19 +37,21 @@ The app includes:
 ---
 
 ## 📁 Repository Contents
-├── app.py # Streamlit application
-├── Data cleaning + Analysis (1).ipynb # Full data cleaning & analysis workflow
-├── Electric_Vehicle_Registration_Data.csv # EV adoption dataset
-├── Electric_Vehicle_Charging_Stations.csv # Public charging station dataset
-├── 2016cityandcountyenergyprofiles.csv # Energy capacity dataset
-├── HDPulse_data_export.csv # Supplemental socioeconomic dataset
-├── Connecticut-EV-Infrastructure-and-Energy-Capacity-Analysis.pdf # Presentation slides
-└── README.md
 
+```text
+app.py                                      # Streamlit application
+Data cleaning + Analysis (1).ipynb         # Full data cleaning & analysis workflow
+Electric_Vehicle_Registration_Data.csv     # EV adoption dataset
+Electric_Vehicle_Charging_Stations.csv     # Public charging station dataset
+2016cityandcountyenergyprofiles.csv        # Energy capacity dataset
+HDPulse_data_export.csv                    # Supplemental socioeconomic dataset
+Connecticut-EV-Infrastructure-and-Energy-Capacity-Analysis.pdf  # Presentation slides
+README.md                                  # Project documentation
+```
 
 ---
 
-## 🧩 Project Motivation
+## Project Motivation
 
 This project aims to answer key statewide questions:
 
@@ -61,7 +63,7 @@ Given the state's ambitious EV and clean-energy targets, these insights directly
 
 ---
 
-## 🔍 Data Sources
+## Data Sources
 
 ### **1. Transportation Data**
 - EV registration counts by city & county  
@@ -81,7 +83,7 @@ Together, these datasets provide a holistic picture of EV readiness across the s
 
 ---
 
-## 📊 Key Findings
+## Key Findings
 
 ### **1. EV Adoption Outpaces Charging Infrastructure**
 Statewide EV ownership is rising quickly, but infrastructure is not keeping pace.
@@ -103,7 +105,7 @@ High-load hubs like **Stamford, Westport, Greenwich, and Fairfield** may exceed 
 
 ---
 
-## 🗺️ Interactive Visualizations
+## Interactive Visualizations
 
 The Streamlit dashboard includes:
 
@@ -117,7 +119,7 @@ These visuals highlight infrastructure disparities and future grid constraints.
 
 ---
 
-## 🧭 Recommendations
+## Recommendations
 
 ### **1. Prioritize Charging Deserts**
 Expand infrastructure in high-EV, low-charger towns such as:
@@ -134,7 +136,7 @@ Coordinate with utilities to prepare for projected 2026 load exceedances.
 
 
 
-## 👥 Team Members
+## Team Members
 Tooba Edhi
 Supriya Sinha
 Tavishi Chaturvedi
@@ -143,7 +145,7 @@ Tejas Kulkarni
 
 ---
 
-## 🛠️ Installation & Local Development
+## Installation & Local Development
 
 ### 1. Clone the Repository
 ```bash
