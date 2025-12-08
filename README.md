@@ -137,10 +137,11 @@ Coordinate with utilities to prepare for projected 2026 load exceedances.
 
 
 ## Team Members
-Tooba Edhi
-Supriya Sinha
-Tavishi Chaturvedi
-Tejas Kulkarni
+
+- Tooba Edhi  
+- Supriya Sinha  
+- Tavishi Chaturvedi  
+- Tejas Kulkarni
 
 
 ---
