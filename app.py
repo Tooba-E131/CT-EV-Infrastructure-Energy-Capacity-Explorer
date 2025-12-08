@@ -468,7 +468,7 @@ with tab_overview:
 - Each row in the charging table represents **one public station**.  
 - The county table aggregates EVs, chargers, income, and population so we can
   identify **where EV adoption is outpacing infrastructure**, especially in
-  higher-income and higher-population counties.
+  higher-population counties.
 """
     )
 
