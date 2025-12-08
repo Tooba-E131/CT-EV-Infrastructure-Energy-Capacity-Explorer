@@ -224,7 +224,7 @@ def load_and_clean_data():
     ch["has_level2"] = (ch.get("ev_level2_evse_num", 0) > 0).astype(int)
     ch["has_level1"] = (ch.get("ev_level1_evse_num", 0) > 0).astype(int)
 
-    # Location columns (rename if necessary)
+    # Location columns
     if {"longitude", "latitude"}.issubset(ch.columns):
         ch["lon"] = ch["longitude"]
         ch["lat"] = ch["latitude"]
@@ -232,7 +232,7 @@ def load_and_clean_data():
         # already fine
         pass
 
-    # ----- Map city → county (FIXED ev_reg block) -----
+    # ----- Map city → county -----
     ev_reg = ev_clean.copy()
 
     if "primary_customer_city" in ev_reg.columns:
@@ -427,7 +427,7 @@ tab_overview, tab_docs, tab_county, tab_maps = st.tabs(
 with tab_overview:
     st.subheader("Big picture")
 
-    # KPIs based on filtered data (prof feedback)
+    # KPIs based on filtered data
     total_ev_records = len(ev_filtered)
     total_charging_stations = len(ch_filtered)
     counties_in_view = county_filtered["county"].nunique()
@@ -692,7 +692,7 @@ Each point is a station; bubble size reflects **total chargers**, and color refl
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=ch_map,
-            get_position="[lon, lat]",  # same pattern you used before
+            get_position="[lon, lat]",  
             get_radius="total_chargers * 400",
             get_fill_color="[has_dc_fast * 255, has_level2 * 180, 120, 180]",
             pickable=True,
